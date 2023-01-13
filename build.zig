@@ -11,13 +11,10 @@ pub fn build(b: *std.build.Builder) void {
     // between Debug, ReleaseSafe, ReleaseFast, and ReleaseSmall.
     const mode = b.standardReleaseOptions();
 
-    const exe = b.addExecutable("wireguard-zig", null);
+    const exe = b.addExecutable("wireguard-zig", "tests/main.zig");
     exe.setTarget(target);
     exe.setBuildMode(mode);
-    exe.addCSourceFiles(&[_][]const u8{
-        "tests/test.c",
-        "vendor/wireguard.c",
-    }, &[_][]const u8{
+    exe.addCSourceFile("vendor/wireguard.c", &[_][]const u8{
         "-Wall",
         "-Oz",
     });
@@ -34,10 +31,16 @@ pub fn build(b: *std.build.Builder) void {
     const run_step = b.step("run", "Run the app");
     run_step.dependOn(&run_cmd.step);
 
-    // const exe_tests = b.addTest("src/main.zig");
-    // exe_tests.setTarget(target);
-    // exe_tests.setBuildMode(mode);
+    const exe_tests = b.addTest("tests/main.zig");
+    exe_tests.setTarget(target);
+    exe_tests.setBuildMode(mode);
+    exe_tests.addCSourceFile("vendor/wireguard.c", &[_][]const u8{
+        "-Wall",
+        "-Oz",
+    });
+    exe_tests.addIncludePath("vendor");
+    exe_tests.linkLibC();
 
-    // const test_step = b.step("test", "Run unit tests");
-    // test_step.dependOn(&exe_tests.step);
+    const test_step = b.step("test", "Run unit tests");
+    test_step.dependOn(&exe_tests.step);
 }
