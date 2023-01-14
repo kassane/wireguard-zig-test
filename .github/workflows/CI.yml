@@ -9,15 +9,13 @@ jobs:
       - uses: actions/checkout@v3
       - uses: goto-bus-stop/setup-zig@v2
         with:
-          version: master
-      - uses: egor-tensin/setup-wireguard@v1
-        with:
-          endpoint: '${{ secrets.ENDPOINT }}'
-          endpoint_public_key: '${{ secrets.ENDPOINT_PUBLIC }}'
-          ips: '${{ secrets.IPS }}'
-          allowed_ips: '${{ secrets.ALLOWED_IPS }}'
-          private_key: '${{ secrets.PRIVATE }}'
-          preshared_key: '${{ secrets.PRESHARED }}'
+          version:master
+      
+      - name: Install Wireguard
+        run: |
+            sudo apt update
+            sudo apt install -f wireguard-tools wireguard-dkms -y && \
+            sudo modprobe wireguard
 
       - name: test
         run: zig build test
