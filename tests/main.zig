@@ -1,4 +1,4 @@
-//! Rewrite test example to zig - 2023 Matheus Catarino <matheus-catarino@hotmail.com>.
+//! Rewrite test example to zig.
 //! wireguard.h - Copyright (C) 2015-2020 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
 
 const std = @import("std");
@@ -27,7 +27,7 @@ pub fn main() void {
         .public_key = std.mem.zeroes([32]u8),
         .private_key = std.mem.zeroes([32]u8),
         .fwmark = 0,
-        .listen_port = @bitCast(u16, @truncate(c_short, @as(c_int, 1234))),
+        .listen_port = 1234,
         .first_peer = &new_peer,
         .last_peer = &new_peer,
     };
@@ -60,6 +60,7 @@ fn list_devices() void {
     var device_name: [*c]u8 = undefined;
     var len: usize = undefined;
     device_names = wireguard.wg_list_device_names();
+
     if (!(device_names != null)) {
         log.err("Unable to get device names", .{});
         return;
@@ -68,7 +69,7 @@ fn list_devices() void {
         _ = blk: {
             device_name = device_names;
             break :blk blk_1: {
-                const tmp = @bitCast(usize, @as(c_long, @as(c_int, 0)));
+                const tmp = 0;
                 len = tmp;
                 break :blk_1 tmp;
             };
@@ -77,31 +78,32 @@ fn list_devices() void {
             const tmp = std.mem.len(device_name);
             len = tmp;
             break :blk tmp;
-        }) != 0) : (device_name += len +% @bitCast(c_ulong, @as(c_long, @as(c_int, 1)))) {
+        }) != 0) : (device_name += len +% 1) {
             var device: [*c]wireguard.wg_device = undefined;
             var peer: [*c]wireguard.wg_peer = undefined;
             var key: wireguard.wg_key_b64_string = undefined;
-            if (wireguard.wg_get_device(&device, device_name) < @as(c_int, 0)) {
+            if (wireguard.wg_get_device(&device, device_name) < 0) {
                 log.err("Unable to get device", .{});
                 continue;
             }
-            if ((device.*.flags & @bitCast(c_uint, wireguard.WGDEVICE_HAS_PUBLIC_KEY)) != 0) {
-                wireguard.wg_key_to_base64(@ptrCast([*c]u8, @alignCast(std.meta.alignment([*c]u8), &key)), @ptrCast([*c]u8, @alignCast(std.meta.alignment([*c]u8), &device.*.public_key)));
-                log.info("{s} has public key {s}\n", .{ device_name, @ptrCast([*c]u8, @alignCast(std.meta.alignment([*c]u8), &key)) });
+            if ((device.*.flags & wireguard.WGDEVICE_HAS_PUBLIC_KEY) != 0) {
+                wireguard.wg_key_to_base64(@ptrCast([*c]u8, &key), @ptrCast([*c]u8, &device.*.public_key));
+                log.info("{s} has public key {s}.", .{ device_name, @ptrCast([*c]u8, &key) });
             } else {
-                log.info("{s} has no public key\n", .{device_name});
+                log.info("{s} has no public key.", .{device_name});
             }
             {
                 peer = device.*.first_peer;
                 while (peer != null) : (peer = peer.*.next_peer) {
-                    wireguard.wg_key_to_base64(@ptrCast([*c]u8, @alignCast(std.meta.alignment([*c]u8), &key)), @ptrCast([*c]u8, @alignCast(std.meta.alignment([*c]u8), &peer.*.public_key)));
-                    log.info(" - peer {s}\n", .{@ptrCast([*c]u8, @alignCast(std.meta.alignment([*c]u8), &key))});
+                    wireguard.wg_key_to_base64(@ptrCast([*c]u8, &key), @ptrCast([*c]u8, &peer.*.public_key));
+                    log.info(" - peer {s}.", .{@ptrCast([*c]u8, &key)});
                 }
             }
             wireguard.wg_free_device(device);
         }
     }
-    std.c.free(@ptrCast(?*anyopaque, device_names));
+    if (!(device_names != null))
+        std.c.free(@ptrCast(?*anyopaque, device_names));
 }
 
 test "Recursively references all the declarations inside" {
