@@ -2,7 +2,9 @@
 //! wireguard.h - Copyright (C) 2015-2020 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
 
 const std = @import("std");
+const crypto = std.crypto;
 const wireguard = @cImport(@cInclude("wireguard.h"));
+
 const log = std.log.scoped(.wireguard);
 
 pub fn main() void {
@@ -33,9 +35,22 @@ pub fn main() void {
     };
     var temp_private_key: wireguard.wg_key = undefined;
 
-    wireguard.wg_generate_private_key(&temp_private_key);
-    wireguard.wg_generate_public_key(&new_peer.public_key, &temp_private_key);
-    wireguard.wg_generate_private_key(&new_device.private_key);
+    // ================================Generating KeyPair======================================
+    // C API
+    // wireguard.wg_generate_private_key(&temp_private_key);
+    // wireguard.wg_generate_public_key(&new_peer.public_key, &temp_private_key);
+    // wireguard.wg_generate_private_key(&new_device.private_key);
+
+    // Zig API
+    const X25519 = std.crypto.dh.X25519;
+    const temp_keys = X25519.KeyPair.create(null) catch @panic("Don't generating temp keys");
+    const device_keys = X25519.KeyPair.create(null) catch @panic("Don't generating keys device");
+
+    std.mem.copy(u8, &temp_private_key, &temp_keys.secret_key);
+    std.mem.copy(u8, &new_peer.public_key, &temp_keys.public_key);
+    std.mem.copy(u8, &new_device.private_key, &device_keys.secret_key);
+    std.mem.copy(u8, &new_device.public_key, &device_keys.public_key);
+    // ========================================================================================
 
     if (wireguard.wg_add_device(&new_device.name) < 0) {
         log.err("Unable to add device", .{});
@@ -102,7 +117,7 @@ fn list_devices() void {
             wireguard.wg_free_device(device);
         }
     }
-    if (!(device_names != null))
+    if ((device_names != null))
         std.c.free(@ptrCast(?*anyopaque, device_names));
 }
 
