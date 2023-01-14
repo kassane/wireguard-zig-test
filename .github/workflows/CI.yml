@@ -1,0 +1,29 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: master
+      - uses: egor-tensin/setup-wireguard@v1
+        with:
+          endpoint: '${{ secrets.ENDPOINT }}'
+          endpoint_public_key: '${{ secrets.ENDPOINT_PUBLIC }}'
+          ips: '${{ secrets.IPS }}'
+          allowed_ips: '${{ secrets.ALLOWED_IPS }}'
+          private_key: '${{ secrets.PRIVATE }}'
+          preshared_key: '${{ secrets.PRESHARED }}'
+
+      - name: test
+        run: zig build test
+
+      - name: build
+        run: zig build -Drelease-safe
+
+      - name: run
+        run: sudo zig-out/bin/wireguard-zig
