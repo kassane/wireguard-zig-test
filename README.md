@@ -21,7 +21,7 @@ info(wireguard):  - peer vEtCZE5RZDDZseZLXJaR6q7yVqRfb0/VjijDZpikWwY=
 
 # More Information
 
-WireGuard&reg; was created and developed by Jason A. Donenfeld. "WireGuard" and the "WireGuard" logo are registered trademarks of [Jason A. Donenfeld](@zx2c4). See https://www.wireguard.com/ for more information
+WireGuard&reg; was created and developed by Jason A. Donenfeld. "WireGuard" and the "WireGuard" logo are registered trademarks of Jason A. Donenfeld [@zx2c4]. See https://www.wireguard.com/ for more information
 
 This project is not approved, sponsored or affiliated with WireGuard or with the community.
 
