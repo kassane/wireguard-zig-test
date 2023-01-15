@@ -53,19 +53,19 @@ pub fn main() void {
 
     if (wireguard.wg_add_device(&new_device.name) < 0) {
         log.err("Unable to add device", .{});
-        std.os.exit(1);
+        return;
     }
 
     if (wireguard.wg_set_device(&new_device) < 0) {
         log.err("Unable to set device", .{});
-        std.os.exit(1);
+        return;
     }
 
     list_devices();
 
     if (wireguard.wg_del_device(&new_device.name) < 0) {
         log.err("Unable to delete device", .{});
-        std.os.exit(1);
+        return;
     }
 }
 
@@ -77,10 +77,11 @@ fn list_devices() void {
 
     if ((device_names == null)) {
         log.err("Unable to get device names", .{});
-        std.os.exit(1);
+        return;
     }
 
-    defer if ((device_names != null)) std.c.free(@ptrCast(?*anyopaque, device_names));
+    defer if ((device_names != null))
+        std.c.free(@ptrCast(?*anyopaque, device_names));
 
     {
         _ = blk: {
@@ -105,18 +106,18 @@ fn list_devices() void {
             }
             var msg: []const u8 = undefined;
             if ((device.*.flags & wireguard.WGDEVICE_HAS_PUBLIC_KEY) != 0) {
-                wireguard.wg_key_to_base64(&key, &device.*.public_key);
+                wireguard.wg_key_to_base64(@ptrCast([*c]u8, &key), &device.*.public_key);
 
                 var bf: []u8 = undefined;
-                msg = std.fmt.bufPrint(bf, "{s} has public key {s}", .{ device_name, &key }) catch unreachable;
+                msg = std.fmt.bufPrint(bf, "{s} has public key {s}", .{ device_name, @ptrCast([*c]u8, &key) }) catch unreachable;
             } else {
                 log.info("{s} has no public key.", .{device_name});
             }
             {
                 peer = device.*.first_peer;
                 while (peer != null) : (peer = peer.*.next_peer) {
-                    wireguard.wg_key_to_base64(&key, &peer.*.public_key);
-                    log.info("{s} - peer {s}\n", .{ msg, &key });
+                    wireguard.wg_key_to_base64(@ptrCast([*c]u8, &key), @ptrCast([*c]u8, &peer.*.public_key));
+                    log.info("{s} - peer {s}\n", .{ msg, @ptrCast([*c]u8, &key) });
                 }
             }
             wireguard.wg_free_device(device);
