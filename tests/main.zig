@@ -53,35 +53,35 @@ pub fn main() void {
 
     if (wireguard.wg_add_device(&new_device.name) < 0) {
         log.err("Unable to add device", .{});
-        return;
+        std.os.exit(1);
     }
 
     if (wireguard.wg_set_device(&new_device) < 0) {
         log.err("Unable to set device", .{});
-        return;
+        std.os.exit(1);
     }
 
     list_devices();
 
     if (wireguard.wg_del_device(&new_device.name) < 0) {
         log.err("Unable to delete device", .{});
-        return;
+        std.os.exit(1);
     }
 }
 
 fn list_devices() void {
-    var device_names: [*c]u8 = undefined;
+    var device_names: ?[*c]u8 = undefined; // optional pointer (don't need C malloc/free)
     var device_name: [*c]u8 = undefined;
     var len: usize = undefined;
     device_names = wireguard.wg_list_device_names();
 
     if (!(device_names != null)) {
         log.err("Unable to get device names", .{});
-        return;
+        std.os.exit(1);
     }
     {
         _ = blk: {
-            device_name = device_names;
+            device_name = device_names.?; // Value orelse null
             break :blk blk_1: {
                 const tmp = 0;
                 len = tmp;
@@ -100,28 +100,28 @@ fn list_devices() void {
                 log.err("Unable to get device", .{});
                 continue;
             }
+            var msg: []const u8 = undefined;
             if ((device.*.flags & wireguard.WGDEVICE_HAS_PUBLIC_KEY) != 0) {
-                wireguard.wg_key_to_base64(@ptrCast([*c]u8, &key), @ptrCast([*c]u8, &device.*.public_key));
-                log.info("{s} has public key {s}.", .{ device_name, @ptrCast([*c]u8, &key) });
+                wireguard.wg_key_to_base64(&key, &device.*.public_key);
+
+                var bf: []u8 = undefined;
+                msg = std.fmt.bufPrint(bf, "{s} has public key {s}", .{ device_name, &key }) catch unreachable;
             } else {
                 log.info("{s} has no public key.", .{device_name});
             }
             {
                 peer = device.*.first_peer;
                 while (peer != null) : (peer = peer.*.next_peer) {
-                    wireguard.wg_key_to_base64(@ptrCast([*c]u8, &key), @ptrCast([*c]u8, &peer.*.public_key));
-                    log.info(" - peer {s}.", .{@ptrCast([*c]u8, &key)});
+                    wireguard.wg_key_to_base64(&key, &peer.*.public_key);
+                    log.info("{s} - peer {s}\n", .{ msg, &key });
                 }
             }
             wireguard.wg_free_device(device);
         }
     }
-    if ((device_names != null))
-        std.c.free(@ptrCast(?*anyopaque, device_names));
 }
 
 test "Recursively references all the declarations inside" {
     const testing = std.testing;
-
     testing.refAllDeclsRecursive(@This());
 }
