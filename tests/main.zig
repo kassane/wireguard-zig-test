@@ -72,7 +72,7 @@ pub fn main() void {
 fn list_devices() void {
     var device_names: [*c]u8 = undefined;
     var device_name: [*c]u8 = undefined;
-    var len: usize = undefined;
+    var len: usize = 0;
     device_names = wireguard.wg_list_device_names();
 
     if (!(device_names != null)) {
@@ -82,32 +82,31 @@ fn list_devices() void {
     defer if ((device_names != null))
         std.c.free(@ptrCast(?*anyopaque, device_names));
 
-    {
-        device_name = device_names;
-        len = std.mem.len(device_name);
-        while (len != 0) : (device_name += len +% 1) {
-            var device: [*c]wireguard.wg_device = undefined;
-            var peer: [*c]wireguard.wg_peer = undefined;
-            var key: wireguard.wg_key_b64_string = undefined;
-            if (wireguard.wg_get_device(&device, device_name) < 0) {
-                log.err("Unable to get device", .{});
-                continue;
-            }
-            if ((device.*.flags & wireguard.WGDEVICE_HAS_PUBLIC_KEY) != 0) {
-                wireguard.wg_key_to_base64(&key, &device.*.public_key);
-                log.info("{s} has public key {s}", .{ device_name, &key });
-            } else {
-                log.info("{s} has no public key.", .{device_name});
-            }
-            {
-                peer = device.*.first_peer;
-                while (peer != null) : (peer = peer.*.next_peer) {
-                    wireguard.wg_key_to_base64(&key, &peer.*.public_key);
-                    log.info("peer {s}", .{&key});
-                }
-            }
-            wireguard.wg_free_device(device);
+    device_name = device_names;
+    len = std.mem.len(device_name);
+    while (len != 0) : (device_name += len +% 1) {
+        defer len = 0;     
+        var device: [*c]wireguard.wg_device = undefined;
+        var peer: [*c]wireguard.wg_peer = undefined;
+        var key: wireguard.wg_key_b64_string = undefined;
+        if (wireguard.wg_get_device(&device, device_name) < 0) {
+            log.err("Unable to get device", .{});
+            continue;
         }
+        if ((device.*.flags & wireguard.WGDEVICE_HAS_PUBLIC_KEY) != 0) {
+            wireguard.wg_key_to_base64(&key, &device.*.public_key);
+            log.info("{s} has public key {s}", .{ device_name, &key });
+        } else {
+            log.info("{s} has no public key.", .{device_name});
+        }
+        {
+            peer = device.*.first_peer;
+            while (peer != null) : (peer = peer.*.next_peer) {
+                wireguard.wg_key_to_base64(&key, &peer.*.public_key);
+                log.info("peer {s}", .{&key});
+            }
+        }
+        wireguard.wg_free_device(device);
     }
 }
 
