@@ -73,30 +73,19 @@ fn list_devices() void {
     var device_names: [*c]u8 = undefined;
     var device_name: [*c]u8 = undefined;
     var len: usize = undefined;
-    device_names = wireguard.wg_list_device_names() orelse null;
+    device_names = wireguard.wg_list_device_names();
 
-    if ((device_names == null)) {
+    if (!(device_names != null)) {
         log.err("Unable to get device names", .{});
         return;
     }
-
     defer if ((device_names != null))
         std.c.free(@ptrCast(?*anyopaque, device_names));
 
     {
-        _ = blk: {
-            device_name = device_names;
-            break :blk blk_1: {
-                const tmp = 0;
-                len = tmp;
-                break :blk_1 tmp;
-            };
-        };
-        while ((blk: {
-            const tmp = std.mem.len(device_name);
-            len = tmp;
-            break :blk tmp;
-        }) != 0) : (device_name += len +% 1) {
+        device_name = device_names;
+        len = std.mem.len(device_name);
+        while (len != 0) : (device_name += len +% 1) {
             var device: [*c]wireguard.wg_device = undefined;
             var peer: [*c]wireguard.wg_peer = undefined;
             var key: wireguard.wg_key_b64_string = undefined;
@@ -104,20 +93,17 @@ fn list_devices() void {
                 log.err("Unable to get device", .{});
                 continue;
             }
-            var msg: []const u8 = undefined;
             if ((device.*.flags & wireguard.WGDEVICE_HAS_PUBLIC_KEY) != 0) {
-                wireguard.wg_key_to_base64(@ptrCast([*c]u8, &key), &device.*.public_key);
-
-                var bf: []u8 = undefined;
-                msg = std.fmt.bufPrint(bf, "{s} has public key {s}", .{ device_name, @ptrCast([*c]u8, &key) }) catch unreachable;
+                wireguard.wg_key_to_base64(&key, &device.*.public_key);
+                log.info("{s} has public key {s}", .{ device_name, &key });
             } else {
                 log.info("{s} has no public key.", .{device_name});
             }
             {
                 peer = device.*.first_peer;
                 while (peer != null) : (peer = peer.*.next_peer) {
-                    wireguard.wg_key_to_base64(@ptrCast([*c]u8, &key), @ptrCast([*c]u8, &peer.*.public_key));
-                    log.info("{s} - peer {s}\n", .{ msg, @ptrCast([*c]u8, &key) });
+                    wireguard.wg_key_to_base64(&key, &peer.*.public_key);
+                    log.info("peer {s}", .{&key});
                 }
             }
             wireguard.wg_free_device(device);
