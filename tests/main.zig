@@ -75,10 +75,11 @@ fn list_devices() void {
     var len: usize = undefined;
     device_names = wireguard.wg_list_device_names();
 
-    if (!(device_names != null)) {
+    if (device_names) |_| {
         log.err("Unable to get device names", .{});
         std.os.exit(1);
     }
+
     {
         _ = blk: {
             device_name = device_names.?; // Value orelse null
