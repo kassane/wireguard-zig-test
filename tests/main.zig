@@ -73,12 +73,14 @@ fn list_devices() void {
     var device_names: ?[*c]u8 = undefined; // optional pointer (don't need C malloc/free)
     var device_name: [*c]u8 = undefined;
     var len: usize = undefined;
-    device_names = wireguard.wg_list_device_names();
+    device_names = wireguard.wg_list_device_names() orelse null;
 
-    if (device_names) |_| {
+    if ((device_names == null)) {
         log.err("Unable to get device names", .{});
         std.os.exit(1);
     }
+
+    defer if ((device_names.? != null)) @panic("leak");
 
     {
         _ = blk: {
