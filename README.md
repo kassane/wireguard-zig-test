@@ -4,7 +4,7 @@ This project is experimental on the possibility to use zig (toolchain and langua
 
 ## Requirements
 
- * [Zig v0.10 or master](https://ziglang.org/download)
+ * [Zig v0.11 or master](https://ziglang.org/download)
  * [Wireguard](https://www.wireguard.com)
 
 

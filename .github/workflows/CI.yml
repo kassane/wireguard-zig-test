@@ -17,11 +17,8 @@ jobs:
             sudo apt install -f wireguard-tools wireguard-dkms -y && \
             sudo modprobe wireguard
 
-      - name: test
-        run: zig build test
+      - name: build summary
+        run: zig build -fsummary
 
-      - name: build
-        run: zig build -Drelease-safe
-
-      - name: run
+      - name: run wireguard-zig
         run: sudo zig-out/bin/wireguard-zig

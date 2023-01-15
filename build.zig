@@ -1,46 +1,91 @@
 const std = @import("std");
 
-pub fn build(b: *std.build.Builder) void {
-    // Standard target options allows the person running `zig build` to choose
-    // what target to build for. Here we do not override the defaults, which
-    // means any target is allowed, and the default is native. Other options
-    // for restricting supported target set are available.
-    const target = b.standardTargetOptions(.{});
-
-    // Standard release options allow the person running `zig build` to select
-    // between Debug, ReleaseSafe, ReleaseFast, and ReleaseSmall.
-    const mode = b.standardReleaseOptions();
-
-    const exe = b.addExecutable("wireguard-zig", "tests/main.zig");
-    exe.setTarget(target);
-    exe.setBuildMode(mode);
-    exe.addCSourceFile("vendor/wireguard.c", &[_][]const u8{
-        "-Wall",
-        "-Oz",
+pub fn build(b: *std.Build) void {
+    const target = b.standardTargetOptions(.{
+        .whitelist = permissive_targets,
     });
-    exe.addIncludePath("vendor");
-    exe.linkLibC();
-    exe.install();
+    const optimize = b.standardOptimizeOption(.{});
 
-    const run_cmd = exe.run();
-    run_cmd.step.dependOn(b.getInstallStep());
-    if (b.args) |args| {
-        run_cmd.addArgs(args);
-    }
-
-    const run_step = b.step("run", "Run the app");
-    run_step.dependOn(&run_cmd.step);
-
-    const exe_tests = b.addTest("tests/main.zig");
-    exe_tests.setTarget(target);
-    exe_tests.setBuildMode(mode);
-    exe_tests.addCSourceFile("vendor/wireguard.c", &[_][]const u8{
-        "-Wall",
-        "-Oz",
+    const libwg = b.addStaticLibrary(.{
+        .name = "wireguard",
+        .target = target,
+        .optimize = optimize,
     });
-    exe_tests.addIncludePath("vendor");
-    exe_tests.linkLibC();
+    libwg.addCSourceFile("vendor/wireguard.c", &[_][]const u8{
+        "-Wall",
+    });
+    libwg.linkLibC();
 
-    const test_step = b.step("test", "Run unit tests");
-    test_step.dependOn(&exe_tests.step);
+    const executable = b.addExecutable(.{
+        .name = "wireguard-zig",
+        .target = target,
+        .optimize = optimize,
+        .root_source_file = .{
+            .path = "test/main.zig",
+        },
+    });
+    executable.linkLibrary(libwg);
+    executable.addIncludePath("vendor");
+    executable.linkLibC();
+
+    b.installArtifact(executable);
+
+    const run_step = b.step("run", b.fmt("Run {s} app", .{executable.name}));
+    run_step.dependOn(&executable.step);
 }
+
+const permissive_targets: []const std.zig.CrossTarget = &.{
+    .{
+        .cpu_arch = .x86_64,
+        .os_tag = .linux,
+        .abi = .gnu,
+    },
+    .{
+        .cpu_arch = .x86,
+        .os_tag = .linux,
+        .abi = .gnu,
+    },
+    .{
+        .cpu_arch = .x86_64,
+        .os_tag = .linux,
+        .abi = .musl,
+    },
+    .{
+        .cpu_arch = .x86,
+        .os_tag = .linux,
+        .abi = .musl,
+    },
+    .{
+        .cpu_arch = .aarch64,
+        .os_tag = .linux,
+        .abi = .gnu,
+    },
+    .{
+        .cpu_arch = .aarch64,
+        .os_tag = .linux,
+        .abi = .musl,
+    },
+    // .{
+    //     .cpu_arch = .riscv64,
+    //     .os_tag = .linux,
+    //     .abi = .gnu,
+    // https://github.com/ziglang/zig/issues/3340
+    // },
+    .{
+        .cpu_arch = .riscv64,
+        .os_tag = .linux,
+        .abi = .musl,
+    },
+    .{
+        .cpu_arch = .powerpc64,
+        .os_tag = .linux,
+        .abi = .gnu,
+    },
+    .{
+        .cpu_arch = .powerpc64,
+        .os_tag = .linux,
+        .abi = .musl,
+    },
+};
+// see all targets list:
+// run: zig targets | jq .libc (json format)
