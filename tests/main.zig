@@ -70,7 +70,7 @@ pub fn main() void {
 }
 
 fn list_devices() void {
-    var device_names: ?[*c]u8 = undefined; // optional pointer (don't need C malloc/free)
+    var device_names: [*c]u8 = undefined;
     var device_name: [*c]u8 = undefined;
     var len: usize = undefined;
     device_names = wireguard.wg_list_device_names() orelse null;
@@ -80,11 +80,11 @@ fn list_devices() void {
         std.os.exit(1);
     }
 
-    defer if ((device_names.? != null)) @panic("leak");
+    defer if ((device_names != null)) std.c.free(@ptrCast(?*anyopaque, device_names));
 
     {
         _ = blk: {
-            device_name = device_names.?; // Value orelse null
+            device_name = device_names;
             break :blk blk_1: {
                 const tmp = 0;
                 len = tmp;
